@@ -107,12 +107,13 @@ public class App extends Application {
         background.setFill(Color.web("#2c3e50"));
         root.getChildren().add(background);
 
-        Scene scene = new Scene(root, 650, 800);
+        Scene scene = new Scene(root, 650, 720);
+
 
         ball = new Ball(300, 400, 10);
         root.getChildren().add(ball);
 
-        paddle = new Paddle(250, 750, 150, 15);
+        paddle = new Paddle(250, 630, 150, 15);
         root.getChildren().add(paddle);
 
         String[] colors = {"#fdad34", "#74fd34", "#fd3464", "#34fdc1", "#d534fd"};

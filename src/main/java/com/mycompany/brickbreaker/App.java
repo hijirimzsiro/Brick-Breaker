@@ -32,12 +32,12 @@ import org.json.JSONObject;
 public class App extends Application {
 
     private final String PLAYER = "player1"; // or "player2"
-    private final String SERVER_URL = "http://127.0.0.1:5000"; // 改成你實際的 Flask 後端 IP
+    private final String SERVER_URL = "http://192.168.139.71:5000"; // 改成你實際的 Flask 後端 IP
 
     private void resetGameStatus() {
         try {
 
-            URL url = new URL("http://127.0.0.1:5000/reset_status");
+            URL url = new URL(SERVER_URL + "/reset_status");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
@@ -55,7 +55,7 @@ public class App extends Application {
 
     private void checkOpponentStatus() {
         try {
-            URL url = new URL("http://127.0.0.1:5000/get_status");
+            URL url = new URL(SERVER_URL + "/get_status");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
 
@@ -108,7 +108,6 @@ public class App extends Application {
         root.getChildren().add(background);
 
         Scene scene = new Scene(root, 650, 720);
-
 
         ball = new Ball(300, 400, 10);
         root.getChildren().add(ball);
@@ -170,10 +169,7 @@ public class App extends Application {
         timer = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                if (now - lastCheckTime > 500_000_000) {
-                    checkOpponentStatus();
-                    lastCheckTime = now;
-                }
+
                 if (now - lastCheckTime > 1_000_000_000) {
                     checkOpponentStatus();
                     lastCheckTime = now;
@@ -186,7 +182,7 @@ public class App extends Application {
         };
         timer.start();
 
-        stage.setTitle("Brick Breaker - 打磚塊小遊戲");
+        stage.setTitle("Brick Breaker");
         stage.setScene(scene);
         stage.show();
     }
@@ -263,7 +259,7 @@ public class App extends Application {
 
     private void uploadScore(String name, int score) {
         try {
-            URL url = new URL("http://127.0.0.1:5000/upload_score");
+            URL url = new URL(SERVER_URL + "/upload_score");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");

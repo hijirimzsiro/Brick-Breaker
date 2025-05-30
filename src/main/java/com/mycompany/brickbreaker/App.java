@@ -31,7 +31,6 @@ import org.json.JSONObject;
 
 public class App extends Application {
 
-    private final String PLAYER = "player1"; // or "player2"
     private final String SERVER_URL = "http://192.168.139.71:5000"; // 改成你實際的 Flask 後端 IP
 
     private void resetGameStatus() {
@@ -54,37 +53,34 @@ public class App extends Application {
     private boolean gameRunning = true;
 
     private void checkOpponentStatus() {
-        try {
-            URL url = new URL(SERVER_URL + "/get_status");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+        new Thread(() -> {
+            try {
+                URL url = new URL(SERVER_URL + "/get_status");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            StringBuilder json = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                json.append(line);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+                reader.close();
+
+                JSONObject status = new JSONObject(sb.toString());
+                String opponent = SystemInfo.playerName.equals("player1") ? "player2" : "player1";
+
+                if (status.has(opponent) && status.getString(opponent).equals("finished")) {
+                    Platform.runLater(() -> {
+                        if (gameRunning) {
+                            endGame();
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                System.out.println("⚠️ 對手狀態輪詢失敗：" + e.getMessage());
             }
-            reader.close();
-
-            JSONObject status = new JSONObject(json.toString());
-            String opponent = SystemInfo.playerName.equals("player1") ? "player2" : "player1";
-            if (status.has(opponent) && status.getString(opponent).equals("finished")) {
-                gameOver = true;
-                timer.stop();
-                Platform.runLater(() -> {
-                    Label over = new Label("對手已結束！");
-                    over.setFont(new Font("Arial", 40));
-                    over.setTextFill(Color.ORANGE);
-                    over.setLayoutX(160);
-                    over.setLayoutY(400);
-                    ((Pane) ball.getParent()).getChildren().add(over);
-                });
-            }
-
-        } catch (Exception e) {
-            System.out.println("對手狀態輪詢失敗");
-        }
+        }).start();
     }
     private List<Brick> bricks = new ArrayList<>();
     private int score = 0;
@@ -99,7 +95,7 @@ public class App extends Application {
 
     @Override
     public void start(Stage stage) {
-        sendStatusToServer(PLAYER, "playing");
+        sendStatusToServer(SystemInfo.playerName, "playing");
         resetGameStatus(); // 🆕 每次開局重置狀態
         Pane root = new Pane();
 
@@ -169,6 +165,10 @@ public class App extends Application {
         timer = new AnimationTimer() {
             @Override
             public void handle(long now) {
+                if (System.currentTimeMillis() - lastCheckTime > 1000) {
+                    checkOpponentStatus();
+                    lastCheckTime = System.currentTimeMillis();
+                }
 
                 if (now - lastCheckTime > 1_000_000_000) {
                     checkOpponentStatus();
@@ -283,7 +283,7 @@ public class App extends Application {
     }
 
     private void endGame() {
-        sendStatusToServer(PLAYER, "finished");
+        sendStatusToServer(SystemInfo.playerName, "finished");
         gameOver = true;
         timer.stop();
 

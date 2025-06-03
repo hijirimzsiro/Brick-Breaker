@@ -1,42 +1,41 @@
 package com.mycompany.brickbreaker;
 
+import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
-import org.json.JSONObject;
-import java.net.*;
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.text.Font;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.io.OutputStream;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
-import javafx.scene.control.TextInputDialog;
-import java.util.Optional;
-import org.json.JSONObject;
-import javafx.scene.control.Button;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
 import org.json.JSONObject;
 
 public class App extends Application {
 
-    private final String SERVER_URL = "http://192.168.139.71:5000"; // 改成你實際的 Flask 後端 IP
+    private final String serverURL = "http://192.168.0.19:5000";
+    private final String playerId = SystemInfo.getPlayerID();
 
     private void resetGameStatus() {
         try {
 
-            URL url = new URL(SERVER_URL + "/reset_status");
+            URL url = new URL(serverURL + "/reset_status");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
@@ -55,7 +54,7 @@ public class App extends Application {
     private void checkOpponentStatus() {
         new Thread(() -> {
             try {
-                URL url = new URL(SERVER_URL + "/get_status");
+                URL url = new URL(serverURL + "/get_status");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
 
@@ -259,7 +258,7 @@ public class App extends Application {
 
     private void uploadScore(String name, int score) {
         try {
-            URL url = new URL(SERVER_URL + "/upload_score");
+            URL url = new URL(serverURL + "/upload_score");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
@@ -372,7 +371,7 @@ public class App extends Application {
     private void sendStatusToServer(String player, String status) {
         new Thread(() -> {
             try {
-                URL url = new URL(SERVER_URL + "/set_status");
+                URL url = new URL(serverURL + "/set_status");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json; utf-8");

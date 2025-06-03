@@ -29,7 +29,7 @@ import org.json.JSONObject;
 
 public class App extends Application {
 
-    private final String serverURL = "http://192.168.0.19:5000";
+    private final String serverURL = "http://192.168.87.27:5000";
     private final String playerId = SystemInfo.getPlayerID();
 
     private void resetGameStatus() {
@@ -339,6 +339,7 @@ public class App extends Application {
         retryButton.setPrefWidth(150);
         retryButton.setStyle("-fx-background-color: orange; -fx-font-size: 16px;");
         retryButton.setOnAction(e -> {
+            SystemInfo.sendSetStatus(serverURL, playerId, "finished");
             new App().start(new Stage());
             ((Stage) retryButton.getScene().getWindow()).close();
         });

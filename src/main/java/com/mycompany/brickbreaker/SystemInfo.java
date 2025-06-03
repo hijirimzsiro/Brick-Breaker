@@ -6,9 +6,18 @@ import java.net.URL;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.json.JSONObject;
+import javafx.application.Platform;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 public class SystemInfo {
-    public static String playerName = "player1"; // 可在主選單更改
+
+    public static String playerName = "player2"; // 可在主選單更改
 
     public static Difficulty difficulty = Difficulty.MEDIUM;
 
@@ -26,71 +35,76 @@ public class SystemInfo {
 
     // ✅ 根據 playerName 回傳 playerID（供後端使用）
     public static String getPlayerID() {
-        return playerName; // "player1" 或 "player2"
+        return playerName;
     }
 
-    // ✅ 發送當前狀態到後端（playing / finished）
     public static void sendSetStatus(String serverURL, String playerId, String status) {
         try {
             URL url = new URL(serverURL + "/set_status");
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("POST");
-            con.setDoOutput(true);
-            con.setRequestProperty("Content-Type", "application/json");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setRequestProperty("Content-Type", "application/json");
 
-            String jsonInput = String.format("{\"player\":\"%s\", \"status\":\"%s\"}", playerId, status);
-            try (OutputStream os = con.getOutputStream()) {
-                byte[] input = jsonInput.getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
+            String jsonInput = String.format("{\"player\": \"%s\", \"status\": \"%s\"}", playerId, status);
 
-            con.getResponseCode();
+            OutputStream os = conn.getOutputStream();
+            os.write(jsonInput.getBytes("utf-8"));
+            os.flush();
+            os.close();
+
+            int responseCode = conn.getResponseCode();
+            System.out.println("送出狀態: " + status + " 回應碼: " + responseCode);
+            conn.disconnect();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    // ✅ 開始輪詢對手狀態（每秒檢查一次）
-    public static void startStatusPolling(String serverURL, String selfPlayerId, Runnable onOpponentFinished) {
-        Timer pollingTimer = new Timer();
-        pollingTimer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    URL url = new URL(serverURL + "/get_status");
-                    HttpURLConnection con = (HttpURLConnection) url.openConnection();
-                    con.setRequestMethod("GET");
+    public static void startStatusPolling(String serverURL, String playerId, Runnable onOpponentFinished) {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        String opponent = playerId.equals("player1") ? "player2" : "player1";
 
-                    BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-                    String response = in.readLine();
-                    in.close();
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                URL url = new URL(serverURL + "/get_status");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
 
-                    JSONObject json = new JSONObject(response);
-                    String opponent = selfPlayerId.equals("player1") ? "player2" : "player1";
-                    String status = json.getString(opponent);
-
-                    if ("finished".equals(status)) {
-                        pollingTimer.cancel();
-                        onOpponentFinished.run();
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
                 }
+                in.close();
+
+                String json = response.toString();
+                String opponentStatus = extractStatus(json, opponent);
+
+                System.out.println("對手狀態: " + opponentStatus);
+
+                if ("finished".equals(opponentStatus)) {
+                    System.out.println("對手已結束遊戲，自動同步結束！");
+                    scheduler.shutdown();
+                    Platform.runLater(onOpponentFinished);
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        }, 0, 1000);
+        }, 0, 2, TimeUnit.SECONDS);
     }
 
-    // ✅ 重置雙方狀態為 playing
-    public static void sendResetRequest(String serverURL) {
-        try {
-            URL url = new URL(serverURL + "/reset_status");
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("POST");
-            con.setDoOutput(true);
-            con.getResponseCode();
-        } catch (Exception e) {
-            e.printStackTrace();
+    private static String extractStatus(String json, String player) {
+        int index = json.indexOf(player);
+        if (index == -1) {
+            return "";
         }
+        int colon = json.indexOf(":", index);
+        int quoteStart = json.indexOf("\"", colon);
+        int quoteEnd = json.indexOf("\"", quoteStart + 1);
+        return json.substring(quoteStart + 1, quoteEnd);
     }
+
 }

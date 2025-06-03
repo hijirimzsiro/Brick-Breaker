@@ -183,6 +183,16 @@ public class App extends Application {
 
         stage.setTitle("Brick Breaker");
         stage.setScene(scene);
+        // 啟動輪詢對手狀態
+        SystemInfo.startStatusPolling(serverURL, playerId, () -> {
+            Platform.runLater(() -> {
+                gameRunning = false;
+                gameOver = true;
+                timer.stop(); // 強制結束遊戲
+                root.getChildren().clear();
+                root.getChildren().add(new Label("對手已結束，遊戲同步結束！"));
+            });
+        });
         stage.show();
     }
 
@@ -284,6 +294,7 @@ public class App extends Application {
     private void endGame() {
         sendStatusToServer(SystemInfo.playerName, "finished");
         gameOver = true;
+        SystemInfo.sendSetStatus(serverURL, playerId, "finished");
         timer.stop();
 
         Label gameOverLabel = new Label("GAME OVER");
@@ -325,6 +336,7 @@ public class App extends Application {
 
     private void winGame() {
         gameOver = true;
+        SystemInfo.sendSetStatus(serverURL, playerId, "finished");
         timer.stop();
 
         Label winLabel = new Label("YOU WIN!! 🎉");

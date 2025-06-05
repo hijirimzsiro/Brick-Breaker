@@ -17,7 +17,7 @@ import java.io.InputStreamReader;
 
 public class SystemInfo {
 
-    public static String playerName = "player2"; // 可在主選單更改
+    public static String playerName = "player1"; // 可在主選單更改
 
     public static Difficulty difficulty = Difficulty.MEDIUM;
 
